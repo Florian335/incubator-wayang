@@ -24,14 +24,13 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import java.util.OptionalDouble;
 
 public class RestAPISourceTest {
     private static final Logger logger = LogManager.getLogger(RestAPISourceTest.class);
-    private static final String TEST_API_URL = "https://jsonplaceholder.typicode.com/posts";
+    private static final String TEST_API_URL = "https://jsonplaceholder.typicode.com/posts/1";
     private RestAPISource restAPISource;
 
     @BeforeEach

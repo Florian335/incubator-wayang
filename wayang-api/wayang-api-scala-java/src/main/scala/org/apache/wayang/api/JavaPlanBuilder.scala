@@ -68,6 +68,19 @@ class JavaPlanBuilder(wayangCtx: WayangContext, jobName: String) {
    * @param topicName the topic's name
    * @return [[DataQuantaBuilder]] for the content in the topic
    */
+
+  def readFromRestAPI(apiURL: String, apiMethod: String = "GET", headers: String = ""): UnarySourceDataQuantaBuilder[UnarySourceDataQuantaBuilder[_, JSONArray], JSONArray] =
+    createSourceBuilder(new RestAPISource(apiURL, apiMethod, headers))(ClassTag(classOf[JSONArray]))
+
+  /**
+  * Pull data from a REST API and provide it as a dataset of [[JSONArray]]s, one per response.
+  *
+  * @param apiURL the URL of the REST API
+  * @param apiMethod the HTTP method to use, e.g., "GET", "POST" (default is "GET")
+  * @param headers optional headers for the request as a single string (default is empty)
+  * @return [[DataQuantaBuilder]] for the JSON content retrieved from the REST API
+  */
+
   def readKafkaTopic(topicName: String): UnarySourceDataQuantaBuilder[UnarySourceDataQuantaBuilder[_, String], String] =
     createSourceBuilder(new KafkaTopicSource(topicName))(ClassTag(classOf[String]))
 
