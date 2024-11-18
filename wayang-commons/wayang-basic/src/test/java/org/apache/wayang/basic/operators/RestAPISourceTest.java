@@ -29,10 +29,9 @@ public class RestAPISourceTest {
 
     @Test
     public void testFetchDataFromJsonPlaceholderAPI() {
-        // Define API details for JSONPlaceholder
         String apiUrl = "https://jsonplaceholder.typicode.com/posts";
         String apiMethod = "GET";
-        String headers = ""; // No headers needed for JSONPlaceholder
+        String headers = "";
 
         // Create the RestAPISource
         RestAPISource restAPISource = new RestAPISource(apiUrl, apiMethod, headers);
@@ -45,7 +44,6 @@ public class RestAPISourceTest {
         Assert.assertTrue("The response should be a JSONArray.", responseData instanceof JSONArray);
         Assert.assertTrue("The response should contain at least one object.", responseData.length() > 0);
 
-        // // Print the first 10 entries to the console
         // int entriesToPrint = Math.min(10, responseData.length());
         // for (int i = 0; i < entriesToPrint; i++) {
         //     JSONObject object = responseData.getJSONObject(i);
@@ -55,7 +53,6 @@ public class RestAPISourceTest {
 
     @Test
     public void testCachedResponse() {
-        // Define API details
         String apiUrl = "https://jsonplaceholder.typicode.com/posts";
         String apiMethod = "GET";
         String headers = ""; // No headers needed
@@ -69,7 +66,6 @@ public class RestAPISourceTest {
         // Fetch data the second time (should use cache)
         JSONArray cachedResponse = restAPISource.fetchDataFromAPI();
 
-        // Verify that the cached response is the same as the first response
         Assert.assertSame("The cached response should be the same instance as the first response.", firstResponse, cachedResponse);
     }
 }

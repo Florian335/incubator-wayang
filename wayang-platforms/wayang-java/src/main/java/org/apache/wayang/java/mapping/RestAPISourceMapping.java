@@ -45,7 +45,6 @@ public class RestAPISourceMapping implements Mapping {
     }
 
     private SubplanPattern createSubplanPattern() {
-        // Create a general operator pattern without specific values.
         final OperatorPattern operatorPattern = new OperatorPattern(
                 "source", new RestAPISource((String) null, (String) null, (String) null), false
         );

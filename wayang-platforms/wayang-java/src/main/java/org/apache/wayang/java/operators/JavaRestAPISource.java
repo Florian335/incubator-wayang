@@ -72,7 +72,6 @@ public class JavaRestAPISource extends RestAPISource implements JavaExecutionOpe
             throw new WayangException("Failed to fetch data from REST API.", e);
         }
     
-        // Return an empty lineage and the output channel
         return new Tuple<>(Collections.emptyList(), Arrays.asList(outputs));
     }
 

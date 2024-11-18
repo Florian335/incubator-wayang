@@ -25,13 +25,14 @@ import java.util.{Collection => JavaCollection}
 import org.apache.commons.lang3.Validate
 import org.apache.wayang.api.util.DataQuantaBuilderCache
 import org.apache.wayang.basic.data.Record
-import org.apache.wayang.basic.operators.{TableSource, TextFileSource, KafkaTopicSource}
+import org.apache.wayang.basic.operators.{TableSource, TextFileSource, KafkaTopicSource, RestAPISource}
 import org.apache.wayang.commons.util.profiledb.model.Experiment
 import org.apache.wayang.core.api.WayangContext
 import org.apache.wayang.core.plan.wayangplan._
 import org.apache.wayang.core.types.DataSetType
 
 import scala.reflect.ClassTag
+import org.json.JSONArray
 
 /**
   * Utility to build and execute [[WayangPlan]]s.
@@ -87,6 +88,19 @@ class JavaPlanBuilder(wayangCtx: WayangContext, jobName: String) {
     * @return [[DataQuantaBuilder]] for the [[Record]]s in the table
     */
   def readTable(source: TableSource) = createSourceBuilder(source)(ClassTag(classOf[Record])).asRecords
+
+    /**
+    * Reads data from a REST API and provides it as a dataset of [[JSONArray]]s.
+    *
+    * @param apiURL    the REST API URL
+    * @param apiMethod the HTTP method to use (e.g., "GET", "POST")
+    * @param headers   optional headers for the API call in the format "Key1:Value1;Key2:Value2"
+    * @return [[DataQuantaBuilder]] for the API data
+    */
+  def readRestAPISource(apiURL: String, apiMethod: String, headers: String): UnarySourceDataQuantaBuilder[UnarySourceDataQuantaBuilder[_, JSONArray], JSONArray] = {
+    val source = new RestAPISource(apiURL, apiMethod, headers)
+    createSourceBuilder(source)(ClassTag(classOf[JSONArray]))
+  }
 
 
   /**

@@ -56,6 +56,9 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
+import org.json.JSONArray;
+import org.json.JSONObject;
+
 
 /**
  * Test suite for the Java API.
@@ -733,5 +736,26 @@ public class JavaApiTest {
                 WayangCollections.asSet(outputValues)
         );
     }
+    @Test
+    public void testReadRestApiSourceWithJsonPlaceholder() {
+        WayangContext wayangContext = new WayangContext().with(Java.basicPlugin());
+        JavaPlanBuilder builder = new JavaPlanBuilder(wayangContext);
 
+        String apiUrl = "https://jsonplaceholder.typicode.com/posts";
+        String apiMethod = "GET";
+        String headers = ""; 
+
+        Collection<JSONArray> jsonArrayCollection = builder
+                .readRestAPISource(apiUrl, apiMethod, headers) 
+                .collect();
+
+
+        // Validate the output
+        Assert.assertFalse("Output should not be empty", jsonArrayCollection.isEmpty());
+        int expectedSize = 100; // Based on the known API response
+        Assert.assertEquals("Unexpected number of entries", expectedSize, jsonArrayCollection.size());
+        System.out.println("Size of jsonArrayCollection: " + jsonArrayCollection.size());
+        // System.out.println("Contents: " + jsonArrayCollection);
+        System.out.println("seems like it worked haha");
+        }
 }
