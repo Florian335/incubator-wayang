@@ -55,6 +55,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -749,6 +750,12 @@ public class JavaApiTest {
                 .readRestAPISource(apiUrl, apiMethod, headers) 
                 .collect();
 
+        // Assert the type of elements in the collection
+        for (Object element : jsonArrayCollection) {
+                // Class<?> elementType = element.getClass();
+                // System.out.println("Element type: " + elementType.getName());
+                System.out.println(((JSONObject) element).getString("body"));
+            }
 
         // Validate the output
         Assert.assertFalse("Output should not be empty", jsonArrayCollection.isEmpty());

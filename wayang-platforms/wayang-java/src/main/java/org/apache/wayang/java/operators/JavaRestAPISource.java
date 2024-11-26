@@ -29,6 +29,7 @@ import org.apache.wayang.java.channels.StreamChannel;
 import org.apache.wayang.java.execution.JavaExecutor;
 import org.apache.wayang.core.util.Tuple;
 import org.json.JSONArray;
+import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,6 +37,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 public class JavaRestAPISource extends RestAPISource implements JavaExecutionOperator {
@@ -62,8 +64,13 @@ public class JavaRestAPISource extends RestAPISource implements JavaExecutionOpe
     
         try {
             JSONArray apiResponse = this.fetchDataFromAPI();
-            Stream<String> responseStream = apiResponse.toList().stream().map(Object::toString);
+            // Stream<String> responseStream = apiResponse.toList().stream().map(Object::toString);
+            // ((StreamChannel.Instance) outputs[0]).accept(responseStream);
+            Stream<JSONObject> responseStream = IntStream.range(0, apiResponse.length())
+            .mapToObj(apiResponse::getJSONObject); // Map each index to a JSONObject
+            // Accept the Stream<JSONObject> in the StreamChannel output
             ((StreamChannel.Instance) outputs[0]).accept(responseStream);
+
     
             logger.info("Successfully streamed data from REST API: {}", this.getAPIURL());
     
