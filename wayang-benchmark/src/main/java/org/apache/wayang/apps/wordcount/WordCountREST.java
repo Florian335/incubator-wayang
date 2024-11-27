@@ -46,8 +46,9 @@ public class WordCountREST {
         // Load configuration from .properties file
         Properties properties = new Properties();
         String apiUrl = null;
+        System.out.println("Current working directory: " + System.getProperty("user.dir"));
 
-        try (FileInputStream fis = new FileInputStream("config.properties")) {
+        try (FileInputStream fis = new FileInputStream("/Users/flo/GitHub/incubator-wayang/wayang-benchmark/src/main/java/org/apache/wayang/apps/wordcount/config.properties")) {
             properties.load(fis);
             apiUrl = properties.getProperty("api_url");
             if (apiUrl == null || apiUrl.isEmpty()) {
