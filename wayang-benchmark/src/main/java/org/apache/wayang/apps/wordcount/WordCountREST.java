@@ -33,12 +33,31 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.Properties;
+import java.io.FileInputStream;
+import java.io.IOException;
+
 
 public class WordCountREST {
 
     private static final Logger log = LoggerFactory.getLogger(WordCountREST.class);
 
     public static void main(String[] args) {
+        // Load configuration from .properties file
+        Properties properties = new Properties();
+        String apiUrl = null;
+
+        try (FileInputStream fis = new FileInputStream("config.properties")) {
+            properties.load(fis);
+            apiUrl = properties.getProperty("api_url");
+            if (apiUrl == null || apiUrl.isEmpty()) {
+                throw new IllegalArgumentException("API URL is not specified in the properties file.");
+            }
+        } catch (IOException e) {
+            log.error("Error loading configuration file: {}", e.getMessage(), e);
+            return;
+        }
+
         // Initialize Wayang context and plan builder
         WayangContext wayangContext = new WayangContext(new Configuration())
                 .withPlugin(Java.basicPlugin());
@@ -47,7 +66,7 @@ public class WordCountREST {
                 .withUdfJarOf(WordCountREST.class);
 
         try {
-            Collection<Tuple2<String, Integer>> wordCounts = runwithRESTAPIData(planBuilder);
+            Collection<Tuple2<String, Integer>> wordCounts = runwithRESTAPIData(planBuilder, apiUrl);
 
             // Print the word counts
             printWordCounts(wordCounts);
@@ -56,37 +75,36 @@ public class WordCountREST {
         }
     }
 
-    private static Collection<Tuple2<String, Integer>> runwithRESTAPIData(JavaPlanBuilder planBuilder) {
-        String apiUrl = "https://jsonplaceholder.typicode.com/posts";
+    private static Collection<Tuple2<String, Integer>> runwithRESTAPIData(JavaPlanBuilder planBuilder, String apiUrl) {
         String apiMethod = "GET";
         String headers = ""; // Add necessary headers here if required
-    
+
         Collection<JSONArray> rawResponse = planBuilder.readRestAPISource(apiUrl, apiMethod, headers).collect();
         // log.info("Raw API Response: {}", rawResponse);
-    
+
         List<JSONObject> extractedJsonObjects = new ArrayList<>();
         for (Object response : rawResponse) {
             extractedJsonObjects.add((JSONObject) response); // Cast and add directly
         }
-    
+
         List<String> bodies = extractedJsonObjects.stream()
             .map(jsonObject -> jsonObject.optString("body", "").trim())
             .filter(body -> !body.isEmpty())
             .collect(Collectors.toList());
         // log.info("Extracted Bodies: {}", bodies);
-    
+
         // Split bodies into words
         List<String> words = bodies.stream()
             .flatMap(body -> splitIntoWords(body).stream())
             .collect(Collectors.toList());
         // log.info("Split Words: {}", words);
-    
+
         // Map words to (word, 1)
         List<Tuple2<String, Integer>> wordTuples = words.stream()
             .map(word -> new Tuple2<>(word.toLowerCase(), 1))
             .collect(Collectors.toList());
         // log.info("Word Tuples: {}", wordTuples);
-    
+
         List<Tuple2<String, Integer>> wordCounts = wordTuples.stream()
             .collect(Collectors.groupingBy(
                 tuple -> tuple.field0,
@@ -96,10 +114,9 @@ public class WordCountREST {
             .map(entry -> new Tuple2<>(entry.getKey(), entry.getValue()))
             .collect(Collectors.toList());
         // log.info("Final Word Counts: {}", wordCounts);
-    
-        return wordCounts;
-    }    
 
+        return wordCounts;
+    }
 
     public static List<String> splitIntoWords(String line) {
         return java.util.Arrays.stream(line.split("\\W+")) // Split on non-word characters
