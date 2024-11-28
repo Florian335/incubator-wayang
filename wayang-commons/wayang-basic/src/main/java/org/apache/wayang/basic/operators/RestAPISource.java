@@ -28,6 +28,7 @@ import org.apache.wayang.core.types.DataSetType;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.json.JSONArray;
+import org.json.JSONObject;
 import org.json.JSONException;
 
 import java.io.BufferedReader;
@@ -69,14 +70,14 @@ public class RestAPISource extends UnarySource<JSONArray> {
             this.logger.info("Returning cached response.");
             return this.cachedResponse;
         }
-    
+
         this.logger.info("Fetching new data from API: {}", this.apiURL);
         HttpURLConnection connection = null;
         try {
             URL url = new URL(this.apiURL);
             connection = (HttpURLConnection) url.openConnection();
             connection.setRequestMethod(this.apiMethod);
-    
+
             if (!this.headers.isEmpty()) {
                 for (String header : this.headers.split(";")) {
                     String[] headerParts = header.trim().split(":", 2);
@@ -87,7 +88,7 @@ public class RestAPISource extends UnarySource<JSONArray> {
                     }
                 }
             }
-    
+
             BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream()));
             StringBuilder content = new StringBuilder();
             String inputLine;
@@ -95,33 +96,80 @@ public class RestAPISource extends UnarySource<JSONArray> {
                 content.append(inputLine).append("\n");
             }
             in.close();
-    
+
+            String response = content.toString();
+
+            // Attempt to parse as JSONArray
             try {
-                this.cachedResponse = new JSONArray(content.toString());
+                this.logger.info("Attempting to parse response as JSONArray.");
+                this.cachedResponse = new JSONArray(response);
+                return this.cachedResponse;
             } catch (JSONException e) {
-                this.logger.info("Response is not a JSONArray, attempting to parse as JSONObject.");
-                try {
-                    org.json.JSONObject jsonObject = new org.json.JSONObject(content.toString());
-                    JSONArray jsonArray = new JSONArray();
-                    jsonArray.put(jsonObject);
-                    this.cachedResponse = jsonArray;
-                } catch (JSONException ex) {
-                    this.logger.error("Unable to parse response as either JSONArray or JSONObject.", ex);
-                    this.cachedResponse = new JSONArray();
-                }
+                this.logger.info("Response is not a JSONArray. Trying as JSONObject.");
             }
-            return this.cachedResponse;
-    
+
+            // Attempt to parse as JSONObject
+            try {
+                JSONObject jsonObject = new JSONObject(response);
+                JSONArray jsonArray = new JSONArray();
+                jsonArray.put(jsonObject);
+                this.cachedResponse = jsonArray;
+                return this.cachedResponse;
+            } catch (JSONException e) {
+                this.logger.info("Response is not a JSONObject. Trying as CSV string.");
+            }
+
+            // Treat response as CSV and parse
+            try {
+                this.cachedResponse = convertCsvToJson(response);
+                return this.cachedResponse;
+            } catch (Exception e) {
+                this.logger.error("Failed to parse response as CSV string.", e);
+                this.cachedResponse = new JSONArray();
+            }
+
         } catch (IOException e) {
             this.logger.error("Unable to fetch data from REST API", e);
             this.cachedResponse = new JSONArray();
-            return this.cachedResponse;
         } finally {
             if (connection != null) {
                 connection.disconnect();
             }
         }
-    }    
+        return this.cachedResponse;
+    }
+
+        private JSONArray convertCsvToJson(String dataString) {
+            String[] lines = dataString.split("\n");
+
+            if (lines.length == 0) {
+                return new JSONArray();
+            }
+
+            String[] columns = lines[0].split(",");
+
+            JSONArray jsonArray = new JSONArray();
+
+            for (int i = 1; i < lines.length; i++) {
+                if (lines[i].trim().isEmpty()) {
+                    continue;
+                }
+
+                String[] values = lines[i].split(",");
+                JSONObject jsonObject = new JSONObject();
+
+                for (int j = 0; j < columns.length; j++) {
+                    String columnName = columns[j].trim();
+                    String value = j < values.length ? values[j].trim() : "";
+                    jsonObject.put(columnName, value);
+                }
+
+                jsonArray.put(jsonObject);
+            }
+
+            return jsonArray;
+        }
+    
 
     @Override
     public Optional<org.apache.wayang.core.optimizer.cardinality.CardinalityEstimator> createCardinalityEstimator(
