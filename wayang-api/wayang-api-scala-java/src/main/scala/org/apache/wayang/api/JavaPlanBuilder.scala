@@ -97,8 +97,8 @@ class JavaPlanBuilder(wayangCtx: WayangContext, jobName: String) {
     * @param headers   optional headers for the API call in the format "Key1:Value1;Key2:Value2"
     * @return [[DataQuantaBuilder]] for the API data
     */
-  def readRestAPISource(apiURL: String, apiMethod: String, headers: String): UnarySourceDataQuantaBuilder[UnarySourceDataQuantaBuilder[_, JSONObject], JSONObject] = {
-    val source = new RestAPISource(apiURL, apiMethod, headers)
+  def readRestAPISource(apiURL: String, apiMethod: String, headers: String, payload: String): UnarySourceDataQuantaBuilder[UnarySourceDataQuantaBuilder[_, JSONObject], JSONObject] = {
+    val source = new RestAPISource(apiURL, apiMethod, headers, payload)
     createSourceBuilder(source)(ClassTag(classOf[JSONObject]))
   }
 

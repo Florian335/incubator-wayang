@@ -46,7 +46,7 @@ public class RestAPISourceMapping implements Mapping {
 
     private SubplanPattern createSubplanPattern() {
         final OperatorPattern operatorPattern = new OperatorPattern(
-                "source", new RestAPISource((String) null, (String) null, (String) null), false
+                "source", new RestAPISource((String) null, (String) null, (String) null, (String) null), false
         );
         return SubplanPattern.createSingleton(operatorPattern);
     }

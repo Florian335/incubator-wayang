@@ -44,12 +44,16 @@ public class RestAPISource extends UnarySource<JSONObject> {
     public final String apiURL;
     public final String apiMethod;
     public final String headers;
+    public final String payload; // New field for payload
 
-    public RestAPISource(String apiURL, String apiMethod, String headers) {
+
+    public RestAPISource(String apiURL, String apiMethod, String headers, String payload) {
         super(DataSetType.createDefault(JSONObject.class));
         this.apiURL = apiURL;
         this.apiMethod = apiMethod;
         this.headers = headers;
+        this.payload = payload;
+
     }
 
     public String getAPIURL() {
@@ -64,6 +68,10 @@ public class RestAPISource extends UnarySource<JSONObject> {
         return this.headers;
     }
 
+    public String getPayload() {
+        return this.payload;
+    }
+}
     // public JSONArray fetchDataFromAPI() {
     //     if (this.cachedResponse != null) {
     //         this.logger.info("Returning cached response.");
@@ -241,4 +249,3 @@ public class RestAPISource extends UnarySource<JSONObject> {
 
     //     return OptionalDouble.of((double) numBytes / numLines);
     // }
-}

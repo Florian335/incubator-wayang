@@ -43,6 +43,7 @@ import java.util.stream.Stream;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.OutputStream;    
 import java.net.HttpURLConnection;
 import java.net.URL;
 
@@ -51,32 +52,55 @@ public class JavaRestAPISource extends RestAPISource implements JavaExecutionOpe
     private static final Logger logger = LoggerFactory.getLogger(JavaRestAPISource.class);
 
     public JavaRestAPISource(RestAPISource restAPISource) {
-        super(restAPISource.getAPIURL(), restAPISource.getAPIMethod(), restAPISource.getHeaders());
+        super(restAPISource.getAPIURL(), restAPISource.getAPIMethod(), restAPISource.getHeaders(), restAPISource.getPayload());
     }
 
-    public JavaRestAPISource(String apiURL, String apiMethod, String headers) {
-        super(apiURL, apiMethod, headers);
+    public JavaRestAPISource(String apiURL, String apiMethod, String headers, String payload) {
+        super(apiURL, apiMethod, headers, payload);
     }
 
     public JSONArray fetchDataFromAPI() {
-        this.logger.info("Fetching new data from API: {}", this.apiURL);
+        String hardcodedURL = "https://api.hubapi.com/crm/v3/objects/deals/search"; 
+        this.logger.info("Fetching data from API with method: {}", this.apiMethod);
         HttpURLConnection connection = null;
         try {
+            // Ensure POST requests only go to the hardcoded URL
+            if ("POST".equalsIgnoreCase(this.apiMethod) && !hardcodedURL.equals(this.apiURL)) {
+                this.logger.error("POST requests are only allowed to the hardcoded URL: {}", hardcodedURL);
+                throw new IllegalArgumentException("POST requests must use the hardcoded URL.");
+            }
+
+            // Use the appropriate URL based on the method
             URL url = new URL(this.apiURL);
             connection = (HttpURLConnection) url.openConnection();
-            connection.setRequestMethod(this.apiMethod);
+            connection.setRequestMethod(this.apiMethod); // Use GET or POST dynamically
 
+            // Add headers if present
             if (!this.headers.isEmpty()) {
                 for (String header : this.headers.split(";")) {
                     String[] headerParts = header.trim().split(":", 2);
                     if (headerParts.length == 2) {
                         connection.setRequestProperty(headerParts[0].trim(), headerParts[1].trim());
                     } else {
-                        this.logger.warn("Invalid header format: " + header);
+                        this.logger.warn("Invalid header format: {}", header);
                     }
                 }
             }
 
+            if ("POST".equalsIgnoreCase(this.apiMethod)) {
+                connection.setDoOutput(true); 
+                String payload = this.getPayload(); 
+                if (payload == null || payload.isEmpty()) {
+                    this.logger.warn("No payload provided for POST request.");
+                } else {
+                    try (OutputStream os = connection.getOutputStream()) {
+                        byte[] input = payload.getBytes("utf-8");
+                        os.write(input, 0, input.length);
+                    }
+                }
+            }
+
+            // Read the response
             BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream()));
             StringBuilder content = new StringBuilder();
             String inputLine;
@@ -121,6 +145,7 @@ public class JavaRestAPISource extends RestAPISource implements JavaExecutionOpe
         }
         return new JSONArray();
     }
+
 
     private JSONArray convertCsvToJson(String dataString) {
         String[] lines = dataString.split("\n");

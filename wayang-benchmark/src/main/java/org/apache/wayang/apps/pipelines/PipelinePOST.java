@@ -16,7 +16,7 @@
 * limitations under the License.
 */
 
-package org.apache.wayang.apps.wordcount;
+package org.apache.wayang.apps.pipelines;
 
 import org.apache.wayang.api.JavaPlanBuilder;
 import org.apache.wayang.basic.data.Tuple2;
@@ -38,12 +38,13 @@ import java.time.temporal.ChronoUnit;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.stream.Collectors;
+import java.time.ZoneOffset;
 
-class ForecastResult {
+class ForecastResultPOST {
     private final float totalFTEs;
     private final int capacity;
 
-    public ForecastResult(float totalFTEs, int capacity) {
+    public ForecastResultPOST(float totalFTEs, int capacity) {
         this.totalFTEs = totalFTEs;
         this.capacity = capacity;
     }
@@ -57,9 +58,9 @@ class ForecastResult {
     }
 }
 
-public class Pipeline {
+public class PipelinePOST {
 
-    private static final Logger log = LoggerFactory.getLogger(Pipeline.class);
+    private static final Logger log = LoggerFactory.getLogger(PipelinePOST.class);
 
     private static String forecastUser;
     private static String forecastToken;
@@ -101,18 +102,18 @@ public class Pipeline {
                 .withPlugin(Java.basicPlugin());
         JavaPlanBuilder planBuilder = new JavaPlanBuilder(wayangContext)
                 .withJobName("Pipelines")
-                .withUdfJarOf(Pipeline.class);
+                .withUdfJarOf(PipelinePOST.class);
 
         String urlForecast = String.format(
                 "https://api.forecastapp.com/aggregate/project_export?timeframe_type=monthly&timeframe=custom&starting=%s&ending=%s",
                 monthToday, month1y
         );
 
-        String urlHubspot = "https://api.hubapi.com/crm/v3/objects/deals?limit=100&properties=start_date,end_date,hs_deal_stage_probability,fte_s_";
+        String urlHubspot = "https://api.hubapi.com/crm/v3/objects/deals/search";
         
         try {
-            ForecastResult forecastResult = ForecastPipeline(planBuilder, urlForecast);
-            double totalFTEsHubspot = HubspotPipeline(planBuilder, urlHubspot, monthToday);
+            ForecastResultPOST forecastResult = ForecastPipelinePOST(planBuilder, urlForecast);
+            double totalFTEsHubspot = HubspotPipelinePOST(planBuilder, urlHubspot, monthToday);
             log.info("Pipeline FTEs: {}", totalFTEsHubspot);
 
             int capacity = forecastResult.getCapacity();
@@ -132,10 +133,15 @@ public class Pipeline {
         }
     }
 
-    private static ForecastResult ForecastPipeline(JavaPlanBuilder planBuilder, String urlForecast) {
+    private static long toEpochMilliseconds(String dateString) {
+        LocalDate date = LocalDate.parse(dateString, DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+        return date.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli();
+    }
+
+    private static ForecastResultPOST ForecastPipelinePOST(JavaPlanBuilder planBuilder, String urlForecast) {
         String apiMethod = "GET";
         String headers = String.format("User-Agent: %s; Authorization: Bearer %s; Forecast-Account-ID: %s", forecastUser, forecastToken, forecastUser);
-
+        String payload = null;
         log.info("Fetching data from {}", urlForecast);
 
         float totalFTEs = 0.0f;
@@ -145,7 +151,7 @@ public class Pipeline {
             List<String> allowedRoles = Arrays.asList("DK", "US inc.");
 
             Collection<Tuple2<Float,String>> filteredData = planBuilder
-                .readRestAPISource(urlForecast, apiMethod, headers) 
+                .readRestAPISource(urlForecast, apiMethod, headers, payload) 
                 .filter(json -> allowedRoles.contains(json.optString("Roles", "")))  
                 .map(json -> {
                     String dec2024Str = json.optString("Dec 2024", "0");
@@ -170,28 +176,50 @@ public class Pipeline {
                 .distinct()
                 .count();
 
-
         } catch (Exception e) {
             log.error("Error fetching data from Forecast API: {}", e.getMessage(), e);
         }
 
-        return new ForecastResult(totalFTEs, capacity);
+        return new ForecastResultPOST(totalFTEs, capacity);
     }
 
-
-    private static double HubspotPipeline(JavaPlanBuilder planBuilder, String urlHubspot, String monthToday) {
-        String apiMethod = "GET";
+    private static double HubspotPipelinePOST(JavaPlanBuilder planBuilder, String urlHubspot, String monthToday) {
+        String apiMethod = "POST";
         String headers = String.format("accept: application/json; content-type: application/json; authorization: Bearer %s", hubspotToken);
-        String changeUrlHubspot = urlHubspot;
+        String currentUrlHubspot = urlHubspot;
         boolean moreResults = true;
         YearMonth filterMonth = YearMonth.from(LocalDate.parse(monthToday, DateTimeFormatter.ofPattern("yyyy-MM-dd")));
         double totalFTEs = 0.0;
+        long startOfMonthEpoch = toEpochMilliseconds(filterMonth.atDay(1).toString());
+        long endOfMonthEpoch = toEpochMilliseconds(filterMonth.atEndOfMonth().toString());
+        String payloadTemplate = "{" +
+            "  \"filterGroups\": [" +
+            "    {" +
+            "      \"filters\": [" +
+            "        {" +
+            "          \"propertyName\": \"start_date\"," +
+            "          \"operator\": \"BETWEEN\"," +
+            "          \"value\": \"%d\"," +
+            "          \"highValue\": \"%d\"" +
+            "        }" +
+            "      ]" +
+            "    }" +
+            "  ]," +
+            "  \"properties\": [\"start_date\", \"end_date\", \"fte_s_\"], " +
+            "  \"after\": \"%s\"" +
+            "}";
 
         Collection<JSONObject> allProperties = new ArrayList<>();
+        String after = null;
+
         try {
             while (moreResults) {
+                String payload = after == null
+                    ? String.format(payloadTemplate, startOfMonthEpoch, endOfMonthEpoch, "")
+                    : String.format(payloadTemplate, startOfMonthEpoch, endOfMonthEpoch, after);
+
                 Collection<JSONObject> rawResponse = planBuilder
-                        .readRestAPISource(changeUrlHubspot, apiMethod, headers)
+                        .readRestAPISource(currentUrlHubspot, apiMethod, headers, payload)
                         .collect();
 
                 for (JSONObject jsonObject : rawResponse) {
@@ -210,11 +238,11 @@ public class Pipeline {
                 log.info("Fetched {} responses in this page", rawResponse.size());
 
                 // Extract pagination token
-                String after = extractAfterToken(rawResponse);
-                if (after != null) {
-                    changeUrlHubspot = urlHubspot + "&after=" + after;
-                } else {
+                after = extractAfterToken(rawResponse);
+                if (after == null || after.isEmpty()) {
                     moreResults = false;
+                } else {
+                    currentUrlHubspot = urlHubspot + "&after=" + after;
                 }
             }
 
@@ -240,17 +268,16 @@ public class Pipeline {
                 })
                 .reduce((fte1, fte2) -> fte1 + fte2) 
                 .collect(); 
-             
-        totalFTEs = fteCollection.isEmpty() ? 0.0 : fteCollection.iterator().next();
+                
+            totalFTEs = fteCollection.isEmpty() ? 0.0 : fteCollection.iterator().next();
 
         } catch (Exception e) {
-            log.error("Error fetching data from Hubspot API: {}", e.getMessage(), e);
+            log.error("Error fetching data from HubSpot API: {}", e.getMessage(), e);
         }
 
         return totalFTEs; 
-}
-       
-    
+        }
+
     private static String extractAfterToken(Collection<JSONObject> rawResponse) {
         for (JSONObject jsonObject : rawResponse) {
             if (jsonObject.has("paging")) {  

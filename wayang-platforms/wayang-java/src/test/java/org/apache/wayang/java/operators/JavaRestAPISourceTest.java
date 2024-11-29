@@ -41,11 +41,12 @@ public class JavaRestAPISourceTest {
     private static final String TEST_API_URL = "https://jsonplaceholder.typicode.com/posts";
     private static final String TEST_API_METHOD = "GET";
     private static final String TEST_HEADERS = "";
+    private static final String TEST_PAYLOAD = null;
 
     @Test
     public void testEvaluate() {
         // Initialize the JavaRestAPISource with a test URL
-        JavaRestAPISource restAPISource = new JavaRestAPISource(TEST_API_URL, TEST_API_METHOD, TEST_HEADERS);
+        JavaRestAPISource restAPISource = new JavaRestAPISource(TEST_API_URL, TEST_API_METHOD, TEST_HEADERS, TEST_PAYLOAD);
 
         // Mock the necessary objects
         StreamChannel.Instance outputChannelInstance = Mockito.mock(StreamChannel.Instance.class);
@@ -72,7 +73,7 @@ public class JavaRestAPISourceTest {
 
     @Test
     public void testFetchDataFromAPI() throws Exception {
-        JavaRestAPISource restAPISource = new JavaRestAPISource(TEST_API_URL, TEST_API_METHOD, TEST_HEADERS);
+        JavaRestAPISource restAPISource = new JavaRestAPISource(TEST_API_URL, TEST_API_METHOD, TEST_HEADERS, TEST_PAYLOAD);
 
         JSONArray jsonResponse = restAPISource.fetchDataFromAPI();
 
