@@ -9,7 +9,8 @@
 *
 *     http://www.apache.org/licenses/LICENSE-2.0
 *
-* Unless required by applicable law or agreed to in writing, software
+* Unless required by applicable law or agreed to in writing,
+* software
 * distributed under the License is distributed on an "AS IS" BASIS,
 * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 * See the License for the specific language governing permissions and
@@ -21,7 +22,6 @@ package org.apache.wayang.java.operators;
 import org.apache.wayang.basic.operators.RestAPISource;
 import org.apache.wayang.core.api.exception.WayangException;
 import org.apache.wayang.core.optimizer.OptimizationContext;
-// import org.apache.wayang.core.optimizer.costs.LoadProfileEstimators;
 import org.apache.wayang.core.platform.ChannelDescriptor;
 import org.apache.wayang.core.platform.ChannelInstance;
 import org.apache.wayang.core.platform.lineage.ExecutionLineageNode;
@@ -30,6 +30,7 @@ import org.apache.wayang.java.execution.JavaExecutor;
 import org.apache.wayang.core.util.Tuple;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.json.JSONException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,6 +40,11 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
 
 public class JavaRestAPISource extends RestAPISource implements JavaExecutionOperator {
 
@@ -49,10 +55,105 @@ public class JavaRestAPISource extends RestAPISource implements JavaExecutionOpe
     }
 
     public JavaRestAPISource(String apiURL, String apiMethod, String headers) {
-    super(apiURL, apiMethod, headers);
-}
+        super(apiURL, apiMethod, headers);
+    }
 
-@Override
+    public JSONArray fetchDataFromAPI() {
+        this.logger.info("Fetching new data from API: {}", this.apiURL);
+        HttpURLConnection connection = null;
+        try {
+            URL url = new URL(this.apiURL);
+            connection = (HttpURLConnection) url.openConnection();
+            connection.setRequestMethod(this.apiMethod);
+
+            if (!this.headers.isEmpty()) {
+                for (String header : this.headers.split(";")) {
+                    String[] headerParts = header.trim().split(":", 2);
+                    if (headerParts.length == 2) {
+                        connection.setRequestProperty(headerParts[0].trim(), headerParts[1].trim());
+                    } else {
+                        this.logger.warn("Invalid header format: " + header);
+                    }
+                }
+            }
+
+            BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+            StringBuilder content = new StringBuilder();
+            String inputLine;
+            while ((inputLine = in.readLine()) != null) {
+                content.append(inputLine).append("\n");
+            }
+            in.close();
+
+            String response = content.toString();
+
+            // Attempt to parse as JSONArray
+            try {
+                this.logger.info("Attempting to parse response as JSONArray.");
+                return new JSONArray(response);
+            } catch (JSONException e) {
+                this.logger.info("Response is not a JSONArray. Trying as JSONObject.");
+            }
+
+            // Attempt to parse as JSONObject
+            try {
+                JSONObject jsonObject = new JSONObject(response);
+                JSONArray jsonArray = new JSONArray();
+                jsonArray.put(jsonObject);
+                return jsonArray;
+            } catch (JSONException e) {
+                this.logger.info("Response is not a JSONObject. Trying as CSV string.");
+            }
+
+            // Treat response as CSV and parse
+            try {
+                return convertCsvToJson(response);
+            } catch (Exception e) {
+                this.logger.error("Failed to parse response as CSV string.", e);
+            }
+
+        } catch (IOException e) {
+            this.logger.error("Unable to fetch data from REST API", e);
+        } finally {
+            if (connection != null) {
+                connection.disconnect();
+            }
+        }
+        return new JSONArray();
+    }
+
+    private JSONArray convertCsvToJson(String dataString) {
+        String[] lines = dataString.split("\n");
+
+        if (lines.length == 0) {
+            return new JSONArray();
+        }
+
+        String[] columns = lines[0].split(",");
+
+        JSONArray jsonArray = new JSONArray();
+
+        for (int i = 1; i < lines.length; i++) {
+            if (lines[i].trim().isEmpty()) {
+                continue;
+            }
+
+            String[] values = lines[i].split(",");
+            JSONObject jsonObject = new JSONObject();
+
+            for (int j = 0; j < columns.length; j++) {
+                String columnName = columns[j].trim();
+                String value = j < values.length ? values[j].trim() : "";
+                jsonObject.put(columnName, value);
+            }
+
+            jsonArray.put(jsonObject);
+        }
+
+        return jsonArray;
+    }
+
+    @Override
     public Tuple<Collection<ExecutionLineageNode>, Collection<ChannelInstance>> evaluate(
             ChannelInstance[] inputs,
             ChannelInstance[] outputs,
@@ -63,15 +164,11 @@ public class JavaRestAPISource extends RestAPISource implements JavaExecutionOpe
         assert outputs.length == this.getNumOutputs();
     
         try {
-            JSONArray apiResponse = this.fetchDataFromAPI();
-            // Stream<String> responseStream = apiResponse.toList().stream().map(Object::toString);
-            // ((StreamChannel.Instance) outputs[0]).accept(responseStream);
+            JSONArray apiResponse = fetchDataFromAPI();
             Stream<JSONObject> responseStream = IntStream.range(0, apiResponse.length())
-            .mapToObj(apiResponse::getJSONObject); // Map each index to a JSONObject
-            // Accept the Stream<JSONObject> in the StreamChannel output
+                    .mapToObj(apiResponse::getJSONObject);
             ((StreamChannel.Instance) outputs[0]).accept(responseStream);
 
-    
             logger.info("Successfully streamed data from REST API: {}", this.getAPIURL());
     
         } catch (Exception e) {

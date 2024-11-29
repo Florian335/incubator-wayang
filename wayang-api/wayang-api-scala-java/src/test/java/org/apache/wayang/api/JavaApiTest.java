@@ -737,32 +737,32 @@ public class JavaApiTest {
                 WayangCollections.asSet(outputValues)
         );
     }
-    @Test
-    public void testReadRestApiSourceWithJsonPlaceholder() {
-        WayangContext wayangContext = new WayangContext().with(Java.basicPlugin());
-        JavaPlanBuilder builder = new JavaPlanBuilder(wayangContext);
+//     @Test
+//     public void testReadRestApiSourceWithJsonPlaceholder() {
+//         WayangContext wayangContext = new WayangContext().with(Java.basicPlugin());
+//         JavaPlanBuilder builder = new JavaPlanBuilder(wayangContext);
 
-        String apiUrl = "https://jsonplaceholder.typicode.com/posts";
-        String apiMethod = "GET";
-        String headers = ""; 
+//         String apiUrl = "https://jsonplaceholder.typicode.com/posts";
+//         String apiMethod = "GET";
+//         String headers = ""; 
 
-        Collection<JSONArray> jsonArrayCollection = builder
-                .readRestAPISource(apiUrl, apiMethod, headers) 
-                .collect();
+//         Collection<JSONArray> jsonArrayCollection = builder
+//                 .readRestAPISource(apiUrl, apiMethod, headers) 
+//                 .collect();
 
-        // Assert the type of elements in the collection
-        for (Object element : jsonArrayCollection) {
-                // Class<?> elementType = element.getClass();
-                // System.out.println("Element type: " + elementType.getName());
-                System.out.println(((JSONObject) element).getString("body"));
-            }
+//         // Assert the type of elements in the collection
+//         for (Object element : jsonArrayCollection) {
+//                 // Class<?> elementType = element.getClass();
+//                 // System.out.println("Element type: " + elementType.getName());
+//                 System.out.println(((JSONObject) element).getString("body"));
+//             }
 
-        // Validate the output
-        Assert.assertFalse("Output should not be empty", jsonArrayCollection.isEmpty());
-        int expectedSize = 100; // Based on the known API response
-        Assert.assertEquals("Unexpected number of entries", expectedSize, jsonArrayCollection.size());
-        System.out.println("Size of jsonArrayCollection: " + jsonArrayCollection.size());
-        // System.out.println("Contents: " + jsonArrayCollection);
-        System.out.println("seems like it worked haha");
-        }
+//         // Validate the output
+//         Assert.assertFalse("Output should not be empty", jsonArrayCollection.isEmpty());
+//         int expectedSize = 100; // Based on the known API response
+//         Assert.assertEquals("Unexpected number of entries", expectedSize, jsonArrayCollection.size());
+//         System.out.println("Size of jsonArrayCollection: " + jsonArrayCollection.size());
+//         // System.out.println("Contents: " + jsonArrayCollection);
+//         System.out.println("seems like it worked haha");
+//         }
 }

@@ -32,7 +32,7 @@ import org.apache.wayang.core.plan.wayangplan._
 import org.apache.wayang.core.types.DataSetType
 
 import scala.reflect.ClassTag
-import org.json.JSONArray
+import org.json.JSONObject
 
 /**
   * Utility to build and execute [[WayangPlan]]s.
@@ -97,9 +97,9 @@ class JavaPlanBuilder(wayangCtx: WayangContext, jobName: String) {
     * @param headers   optional headers for the API call in the format "Key1:Value1;Key2:Value2"
     * @return [[DataQuantaBuilder]] for the API data
     */
-  def readRestAPISource(apiURL: String, apiMethod: String, headers: String): UnarySourceDataQuantaBuilder[UnarySourceDataQuantaBuilder[_, JSONArray], JSONArray] = {
+  def readRestAPISource(apiURL: String, apiMethod: String, headers: String): UnarySourceDataQuantaBuilder[UnarySourceDataQuantaBuilder[_, JSONObject], JSONObject] = {
     val source = new RestAPISource(apiURL, apiMethod, headers)
-    createSourceBuilder(source)(ClassTag(classOf[JSONArray]))
+    createSourceBuilder(source)(ClassTag(classOf[JSONObject]))
   }
 
 
