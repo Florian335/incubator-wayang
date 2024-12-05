@@ -1,0 +1,98 @@
+[
+    {
+        "step": "API Latency",
+        "latency_seconds": 0.682,
+        "url": "https://api.forecastapp.com/aggregate/project_export?timeframe_type=monthly&timeframe=custom&starting=2025-01-01&ending=2025-03-01",
+        "timestamp": "Thu Dec 05 13:45:10 CET 2024"
+    },
+    {
+        "step": "API Latency",
+        "latency_seconds": 0.38,
+        "url": "https://api.hubapi.com/crm/v3/objects/deals/search",
+        "timestamp": "Thu Dec 05 13:45:10 CET 2024"
+    },
+    {
+        "step": "API Latency",
+        "latency_seconds": 0.226,
+        "url": "https://api.hubapi.com/crm/v3/objects/deals/search",
+        "timestamp": "Thu Dec 05 13:45:11 CET 2024"
+    },
+    {
+        "step": "API Latency",
+        "latency_seconds": 0.177,
+        "url": "https://api.hubapi.com/crm/v3/objects/deals/search",
+        "timestamp": "Thu Dec 05 13:45:11 CET 2024"
+    },
+    {
+        "step": "API Latency",
+        "latency_seconds": 0.263,
+        "url": "https://api.hubapi.com/crm/v3/objects/deals/search",
+        "timestamp": "Thu Dec 05 13:45:11 CET 2024"
+    },
+    {
+        "step": "API Latency",
+        "latency_seconds": 0.218,
+        "url": "https://api.hubapi.com/crm/v3/objects/deals/search",
+        "timestamp": "Thu Dec 05 13:45:11 CET 2024"
+    },
+    {
+        "step": "API Latency",
+        "latency_seconds": 0.204,
+        "url": "https://api.hubapi.com/crm/v3/objects/deals/search",
+        "timestamp": "Thu Dec 05 13:45:12 CET 2024"
+    },
+    {
+        "step": "API Latency",
+        "latency_seconds": 0.214,
+        "url": "https://api.hubapi.com/crm/v3/objects/deals/search",
+        "timestamp": "Thu Dec 05 13:45:12 CET 2024"
+    },
+    {
+        "step": "API Latency",
+        "latency_seconds": 0.767,
+        "url": "https://api.forecastapp.com/aggregate/project_export?timeframe_type=monthly&timeframe=custom&starting=2025-01-01&ending=2025-03-01",
+        "timestamp": "Thu Dec 05 13:53:39 CET 2024"
+    },
+    {
+        "step": "API Latency",
+        "latency_seconds": 0.458,
+        "url": "https://api.hubapi.com/crm/v3/objects/deals/search",
+        "timestamp": "Thu Dec 05 13:53:39 CET 2024"
+    },
+    {
+        "step": "API Latency",
+        "latency_seconds": 0.298,
+        "url": "https://api.hubapi.com/crm/v3/objects/deals/search",
+        "timestamp": "Thu Dec 05 13:53:40 CET 2024"
+    },
+    {
+        "step": "API Latency",
+        "latency_seconds": 0.214,
+        "url": "https://api.hubapi.com/crm/v3/objects/deals/search",
+        "timestamp": "Thu Dec 05 13:53:40 CET 2024"
+    },
+    {
+        "step": "API Latency",
+        "latency_seconds": 0.307,
+        "url": "https://api.hubapi.com/crm/v3/objects/deals/search",
+        "timestamp": "Thu Dec 05 13:53:40 CET 2024"
+    },
+    {
+        "step": "API Latency",
+        "latency_seconds": 0.312,
+        "url": "https://api.hubapi.com/crm/v3/objects/deals/search",
+        "timestamp": "Thu Dec 05 13:53:41 CET 2024"
+    },
+    {
+        "step": "API Latency",
+        "latency_seconds": 0.198,
+        "url": "https://api.hubapi.com/crm/v3/objects/deals/search",
+        "timestamp": "Thu Dec 05 13:53:41 CET 2024"
+    },
+    {
+        "step": "API Latency",
+        "latency_seconds": 0.256,
+        "url": "https://api.hubapi.com/crm/v3/objects/deals/search",
+        "timestamp": "Thu Dec 05 13:53:41 CET 2024"
+    }
+]

@@ -39,6 +39,12 @@ import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.stream.Collectors;
 
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
+import java.time.Instant;
+import java.util.Date;
+
 class ForecastResult {
     private final float totalFTEs;
     private final int capacity;
@@ -64,6 +70,48 @@ public class Pipeline {
     private static String forecastUser;
     private static String forecastToken;
     private static String hubspotToken;
+    private static final String LOG_FILE_PATH = "json-queries-performance.json";
+
+    public static void logtoJSON(String stepname, Double latencyseconds, Double executiontime){
+        try {
+            JSONObject logrecord = new JSONObject();
+            logrecord.put("timestamp", Date.from(Instant.now()).toString());
+            logrecord.put("step",stepname);
+            logrecord.put("execution_time_seconds", executiontime);
+
+            appendlogtofile(logrecord);
+        } catch (Exception e) {
+            log.error("Unable to add data to JSON: {}", e.getMessage(),e);
+        }
+    }
+
+    public static void logQueryTime(long starttime, long endtime, String stepname){
+        Double executiontimeseconds = (endtime - starttime) / 1000.0;
+        logtoJSON(stepname, null, executiontimeseconds);
+    }
+
+    private static void appendlogtofile(JSONObject logrecord) throws IOException {
+        JSONArray existinglogs;
+
+        if (Files.exists(Paths.get(LOG_FILE_PATH))){
+            String content = new String(Files.readAllBytes(Paths.get(LOG_FILE_PATH)));
+            if (!content.isEmpty()){
+                existinglogs = new JSONArray(content);
+            } else {
+                existinglogs = new JSONArray();
+            }
+        } else {
+            existinglogs = new JSONArray();
+        }
+
+        existinglogs.put(logrecord);
+        Files.write(
+            Paths.get(LOG_FILE_PATH),
+            existinglogs.toString(4).getBytes(),
+            StandardOpenOption.CREATE,
+            StandardOpenOption.TRUNCATE_EXISTING
+        );
+    }
 
     public static void main(String[] args) {
         Properties properties = new Properties();
@@ -79,8 +127,9 @@ public class Pipeline {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
         String monthToday = today.format(formatter);
 
-        LocalDateTime futureDate = today.plus(548, ChronoUnit.DAYS);
-        String month1y = futureDate.format(formatter);
+        LocalDateTime futureDate = today.plus(2, ChronoUnit.MONTHS);
+
+        String month2m = futureDate.format(formatter);
 
         try (FileInputStream fis = new FileInputStream(configFilePath)) {
             properties.load(fis);
@@ -105,14 +154,22 @@ public class Pipeline {
 
         String urlForecast = String.format(
                 "https://api.forecastapp.com/aggregate/project_export?timeframe_type=monthly&timeframe=custom&starting=%s&ending=%s",
-                monthToday, month1y
+                monthToday, month2m
         );
 
         String urlHubspot = "https://api.hubapi.com/crm/v3/objects/deals?limit=100&properties=start_date,end_date,hs_deal_stage_probability,fte_s_";
         
         try {
+            long starttime_f = System.currentTimeMillis();
             ForecastResult forecastResult = ForecastPipeline(planBuilder, urlForecast);
+            long endtime_f = System.currentTimeMillis();
+            logQueryTime(starttime_f, endtime_f, "Forecast Entire Query Process");
+
+            long starttime_h = System.currentTimeMillis();
             double totalFTEsHubspot = HubspotPipeline(planBuilder, urlHubspot, monthToday);
+            long endtime_h = System.currentTimeMillis();
+            logQueryTime(starttime_h, endtime_h, "HubSpot Entire Query Process");
+
             log.info("Pipeline FTEs: {}", totalFTEsHubspot);
 
             int capacity = forecastResult.getCapacity();
@@ -148,12 +205,12 @@ public class Pipeline {
                 .readRestAPISource(urlForecast, apiMethod, headers, payload) 
                 .filter(json -> allowedRoles.contains(json.optString("Roles", "")))  
                 .map(json -> {
-                    String dec2024Str = json.optString("Dec 2024", "0");
+                    String jan2025str = json.optString("Jan 2025", "0");
                     float fte;
                     try {
-                        fte = Float.parseFloat(dec2024Str) / 165;
+                        fte = Float.parseFloat(jan2025str) / (float) 172.5;
                     } catch (NumberFormatException e) {
-                        log.error("Invalid number for Dec 2024: " + dec2024Str, e);
+                        log.error("Invalid number for January 2025: " + jan2025str, e);
                         fte = 0.0f;
                     }
                     String person = json.optString("Person", "Unknown");

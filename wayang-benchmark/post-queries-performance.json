@@ -1,0 +1,22 @@
+[
+    {
+        "step": "Forecast Entire Query Process",
+        "execution_time_seconds": 1.206,
+        "timestamp": "Thu Dec 05 13:45:10 CET 2024"
+    },
+    {
+        "step": "HubSpot Entire Query Process",
+        "execution_time_seconds": 0.171,
+        "timestamp": "Thu Dec 05 13:45:12 CET 2024"
+    },
+    {
+        "step": "Forecast Entire Query Process",
+        "execution_time_seconds": 1.217,
+        "timestamp": "Thu Dec 05 13:53:39 CET 2024"
+    },
+    {
+        "step": "HubSpot Entire Query Process",
+        "execution_time_seconds": 0.132,
+        "timestamp": "Thu Dec 05 13:53:41 CET 2024"
+    }
+]

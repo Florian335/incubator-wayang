@@ -47,9 +47,59 @@ import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
+import java.time.Instant;
+import java.util.Date;
+
 public class JavaRestAPISource extends RestAPISource implements JavaExecutionOperator {
 
     private static final Logger logger = LoggerFactory.getLogger(JavaRestAPISource.class);
+    private static final String LOG_FILE_PATH = "json-api-latency.json";
+
+    public static void logtoJSON(String stepname, Double latencyseconds, String apiurl) {
+        try {
+            JSONObject logrecord = new JSONObject();
+            logrecord.put("timestamp", Date.from(Instant.now()).toString());
+            logrecord.put("step", stepname);
+            logrecord.put("latency_seconds", latencyseconds);
+            logrecord.put("url", apiurl);
+
+            appendlogtofile(logrecord);
+        } catch (Exception e) {
+            logger.error("Unable to add data to JSON: {}", e.getMessage(), e);
+        }
+    }
+
+    public static void logAPIlatency(long starttime, long endtime, String stepname, String apiurl){
+        Double latencyseconds = (endtime - starttime) / 1000.0;
+        logtoJSON(stepname, latencyseconds, apiurl);
+    }
+
+    private static void appendlogtofile(JSONObject logrecord) throws IOException {
+        JSONArray existinglogs;
+
+        if (Files.exists(Paths.get(LOG_FILE_PATH))){
+            String content = new String(Files.readAllBytes(Paths.get(LOG_FILE_PATH)));
+            if (!content.isEmpty()){
+                existinglogs = new JSONArray(content);
+            } else {
+                existinglogs = new JSONArray();
+            }
+        } else {
+            existinglogs = new JSONArray();
+        }
+
+        existinglogs.put(logrecord);
+        Files.write(
+            Paths.get(LOG_FILE_PATH),
+            existinglogs.toString(4).getBytes(),
+            StandardOpenOption.CREATE,
+            StandardOpenOption.TRUNCATE_EXISTING
+        );
+    }
+
 
     public JavaRestAPISource(RestAPISource restAPISource) {
         super(restAPISource.getAPIURL(), restAPISource.getAPIMethod(), restAPISource.getHeaders(), restAPISource.getPayload());
@@ -62,10 +112,12 @@ public class JavaRestAPISource extends RestAPISource implements JavaExecutionOpe
     public JSONArray fetchDataFromAPI() {
         String hardcodedURL = "https://api.hubapi.com/crm/v3/objects/deals/search"; 
         this.logger.info("Fetching data from API with method: {}", this.apiMethod);
+
+        long apistarttime = System.currentTimeMillis();
         HttpURLConnection connection = null;
         try {
             // Ensure POST requests only go to the hardcoded URL
-            if ("POST".equalsIgnoreCase(this.apiMethod) && !hardcodedURL.equals(this.apiURL)) {
+            if ("POST".equalsIgnoreCase(this.apiMethod) && !this.apiURL.startsWith(hardcodedURL)) {
                 this.logger.error("POST requests are only allowed to the hardcoded URL: {}", hardcodedURL);
                 throw new IllegalArgumentException("POST requests must use the hardcoded URL.");
             }
@@ -99,7 +151,6 @@ public class JavaRestAPISource extends RestAPISource implements JavaExecutionOpe
                     }
                 }
             }
-
             // Read the response
             BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream()));
             StringBuilder content = new StringBuilder();
@@ -110,6 +161,9 @@ public class JavaRestAPISource extends RestAPISource implements JavaExecutionOpe
             in.close();
 
             String response = content.toString();
+
+            long apiendttime = System.currentTimeMillis();
+            logAPIlatency(apistarttime, apiendttime, "API Latency",this.apiURL);
 
             // Attempt to parse as JSONArray
             try {
