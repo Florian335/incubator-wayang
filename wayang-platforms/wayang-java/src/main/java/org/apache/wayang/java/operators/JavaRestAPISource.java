@@ -117,8 +117,13 @@ public class JavaRestAPISource extends RestAPISource implements JavaExecutionOpe
         HttpURLConnection connection = null;
         try {
             // Ensure POST requests only go to the hardcoded URL
+<<<<<<< Updated upstream
             if ("POST".equalsIgnoreCase(this.apiMethod) && !this.apiURL.startsWith(hardcodedURL)) {
                 this.logger.error("POST requests are only allowed to the hardcoded URL: {}", hardcodedURL);
+=======
+            if ("POST".equalsIgnoreCase(this.apiMethod) && !hardcodedURL.equals(this.apiURL)) {
+                logger.error("POST requests are only allowed to the hardcoded URL: {}", hardcodedURL);
+>>>>>>> Stashed changes
                 throw new IllegalArgumentException("POST requests must use the hardcoded URL.");
             }
 

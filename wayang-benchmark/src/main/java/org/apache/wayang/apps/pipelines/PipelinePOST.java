@@ -22,6 +22,7 @@ import org.apache.wayang.api.JavaPlanBuilder;
 import org.apache.wayang.basic.data.Tuple2;
 import org.apache.wayang.core.api.Configuration;
 import org.apache.wayang.core.api.WayangContext;
+import org.apache.wayang.core.api.DataQuantaBuilder;
 import org.apache.wayang.java.Java;
 import org.apache.wayang.api.DataQuanta;
 import org.slf4j.Logger;
@@ -206,9 +207,35 @@ public class PipelinePOST {
         try {
             List<String> allowedRoles = Arrays.asList("DK", "US inc.");
 
-            DataQuanta<JSONObject> filteredData = planBuilder // look into this
-                .readRestAPISource(urlForecast, apiMethod, headers, payload) 
-                .filter(json -> allowedRoles.contains(json.optString("Roles", "")))  
+            // Collection<Tuple2<Float,String>> filteredData = planBuilder
+            //     .readRestAPISource(urlForecast, apiMethod, headers, payload) 
+            //     .filter(json -> allowedRoles.contains(json.optString("Roles", "")))  
+            //     .map(json -> {
+            //         String dec2024Str = json.optString("Dec 2024", "0");
+            //         float fte;
+            //         try {
+            //             fte = Float.parseFloat(dec2024Str) / 165;
+            //         } catch (NumberFormatException e) {
+            //             log.error("Invalid number for Dec 2024: " + dec2024Str, e);
+            //             fte = 0.0f;
+            //         }
+            //         String person = json.optString("Person", "Unknown");
+            //         return new Tuple2<>(fte, person);
+            //     })
+            //     .collect();  
+
+            // totalFTEs = filteredData.stream()
+            //     .map(tuple -> tuple.field0)  
+            //     .reduce(0.0f, Float::sum);
+
+            // capacity = (int) filteredData.stream()
+            //     .map(tuple -> tuple.field1)  
+            //     .distinct()
+            //     .count();
+
+            DataQuantaBuilder<?, Tuple2<Float, String>> filteredData = planBuilder        
+                .readRestAPISource(urlForecast, apiMethod, headers, payload)        
+                .filter(json -> allowedRoles.contains(json.optString("Roles", "")))        
                 .map(json -> {
                     String jan2025str = json.optString("Jan 2025", "0");
                     float fte;
