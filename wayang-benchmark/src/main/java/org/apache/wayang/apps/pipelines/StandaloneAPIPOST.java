@@ -27,14 +27,12 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 import java.util.Properties;
-import java.time.format.DateTimeParseException;
 
-
-class ForecastResultTEST {
+class ForecastResultPOSTTEST {
     private final float totalFTEs;
     private final int capacity;
 
-    public ForecastResultTEST(float totalFTEs, int capacity) {
+    public ForecastResultPOSTTEST(float totalFTEs, int capacity) {
         this.totalFTEs = totalFTEs;
         this.capacity = capacity;
     }
@@ -48,11 +46,11 @@ class ForecastResultTEST {
     }
 }
 
-public class StandaloneAPI {
+public class StandaloneAPIPOST {
 
-    private static final Logger logger = LoggerFactory.getLogger(StandaloneAPI.class);
-    private static final String LOG_FILE_PATH_LATENCY = "json-api-latency.json";
-    private static final String LOG_FILE_PATH_QUERIES = "json-queries-performance.json";
+    private static final Logger logger = LoggerFactory.getLogger(StandaloneAPIPOST.class);
+    private static final String LOG_FILE_PATH_LATENCY = "post-api-latency.json";
+    private static final String LOG_FILE_PATH_QUERIES = "post-queries-performance.json";
 
     private String apiURL;
     private String apiMethod;
@@ -64,7 +62,7 @@ public class StandaloneAPI {
         
     
     
-        public StandaloneAPI(String apiURL, String apiMethod, String headers, String payload) {
+        public StandaloneAPIPOST(String apiURL, String apiMethod, String headers, String payload) {
             this.apiURL = apiURL;
             this.apiMethod = apiMethod;
             this.headers = headers;
@@ -277,17 +275,17 @@ public class StandaloneAPI {
                     monthToday, month2m
             );
 
-            String urlHubspot = "https://api.hubapi.com/crm/v3/objects/deals?limit=100&properties=start_date,end_date,hs_deal_stage_probability,fte_s_";
+            String urlHubspot = "https://api.hubapi.com/crm/v3/objects/deals/search";
         
         try {
             long starttime_f = System.currentTimeMillis();
-            ForecastResultTEST forecastResult = ForecastPipelineTEST(urlForecast);
+            ForecastResultPOSTTEST forecastResult = ForecastPipelinePOSTTEST(urlForecast);
             long endtime_f = System.currentTimeMillis();
             logQueryTime(starttime_f, endtime_f, "Forecast Entire Query Process",null);
 
 
             long starttime_h = System.currentTimeMillis();
-            double totalFTEsHubspot = HubspotPipelineTEST(urlHubspot, monthToday);
+            double totalFTEsHubspot = HubspotPipelinePOSTTEST(urlHubspot, monthToday);
             long endtime_h = System.currentTimeMillis();
             logQueryTime(starttime_h, endtime_h, "Hubspot Entire Query Process",null);
 
@@ -315,7 +313,7 @@ public class StandaloneAPI {
         return date.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli();
     }
 
-    private static ForecastResultTEST ForecastPipelineTEST(String urlForecast) {
+    private static ForecastResultPOSTTEST ForecastPipelinePOSTTEST(String urlForecast) {
         String apiMethod = "GET";
         String headers = String.format("User-Agent: %s; Authorization: Bearer %s; Forecast-Account-ID: %s", forecastUser, forecastToken, forecastUser);
         String payload = null;
@@ -325,7 +323,7 @@ public class StandaloneAPI {
         int capacity = 0;
     
         try {
-            StandaloneAPI api = new StandaloneAPI(urlForecast, apiMethod, headers, payload);
+            StandaloneAPIPOST api = new StandaloneAPIPOST(urlForecast, apiMethod, headers, payload);
             JSONArray response = api.fetchDataFromAPI();
     
             List<String> allowedRoles = Arrays.asList("DK", "US inc.");
@@ -364,27 +362,45 @@ public class StandaloneAPI {
             logger.error("Error fetching data from Forecast API: {}", e.getMessage(), e);
         }
     
-        return new ForecastResultTEST(totalFTEs, capacity);
+        return new ForecastResultPOSTTEST(totalFTEs, capacity);
     }
     
 
-    private static double HubspotPipelineTEST(String urlHubspot, String monthToday) {
-        String apiMethod = "GET";
+    private static double HubspotPipelinePOSTTEST(String urlHubspot, String monthToday) {
+        String apiMethod = "POST";
         String headers = String.format("accept: application/json; content-type: application/json; authorization: Bearer %s", hubspotToken);
         boolean moreResults = true;
         YearMonth filterMonth = YearMonth.from(LocalDate.parse(monthToday, DateTimeFormatter.ofPattern("yyyy-MM-dd")));
         double totalFTEs = 0.0;
         long startOfMonthEpoch = toEpochMilliseconds(filterMonth.atDay(1).toString());
         long endOfMonthEpoch = toEpochMilliseconds(filterMonth.atEndOfMonth().toString());
-        String changeUrlHubspot = urlHubspot;
-        String payload = "";
-
+        String payloadTemplate = "{" +
+                "  \"filterGroups\": [" +
+                "    {" +
+                "      \"filters\": [" +
+                "        {" +
+                "          \"propertyName\": \"start_date\"," +
+                "          \"operator\": \"BETWEEN\"," +
+                "          \"value\": \"%d\"," +
+                "          \"highValue\": \"%d\"" +
+                "        }" +
+                "      ]" +
+                "    }" +
+                "  ]," +
+                "  \"properties\": [\"start_date\", \"end_date\", \"fte_s_\"], " +
+                "  \"after\": \"%s\"" +
+                "}";
     
         Collection<JSONObject> allProperties = new ArrayList<>();
+        String after = null;
     
         try {
             while (moreResults) {
-                StandaloneAPI api = new StandaloneAPI(changeUrlHubspot, apiMethod, headers, payload);
+                String payload = after == null
+                        ? String.format(payloadTemplate, startOfMonthEpoch, endOfMonthEpoch, "")
+                        : String.format(payloadTemplate, startOfMonthEpoch, endOfMonthEpoch, after);
+    
+                StandaloneAPIPOST api = new StandaloneAPIPOST(urlHubspot, apiMethod, headers, payload);
                 JSONArray rawResponse = api.fetchDataFromAPI();
 
                 for (int i = 0; i < rawResponse.length(); i++) {
@@ -400,42 +416,27 @@ public class StandaloneAPI {
                     }
                 }
     
-                String after = extractAfterToken(rawResponse);
-                if (after != null) {
-                    changeUrlHubspot = urlHubspot + "&after=" + after;
-                } else {
+                after = extractAfterToken(rawResponse);
+                if (after == null || after.isEmpty()) {
                     moreResults = false;
                 }
             }
-            
+    
             long starttime_h = System.currentTimeMillis();
             for (JSONObject obj : allProperties) {
-                if (obj.has("start_date") && !obj.isNull("start_date") && 
-                    obj.has("end_date") && !obj.isNull("end_date") && 
-                    obj.has("fte_s_") && !obj.isNull("fte_s_")) {
-                    
-                    String startDateStr = obj.getString("start_date");
-                    String endDateStr = obj.getString("end_date");
-
-                    if (!startDateStr.isEmpty() && !endDateStr.isEmpty()) {
-                        try {
-                            LocalDate startDate = LocalDate.parse(startDateStr, DateTimeFormatter.ofPattern("yyyy-MM-dd"));
-                            LocalDate endDate = LocalDate.parse(endDateStr, DateTimeFormatter.ofPattern("yyyy-MM-dd"));
-
-                            if (YearMonth.from(startDate).equals(filterMonth)) {
-                                long monthsBetween = Math.max(1, ChronoUnit.MONTHS.between(startDate, endDate));
-                                double fteValue = obj.getDouble("fte_s_");
-                                totalFTEs += fteValue / monthsBetween;
-                            }
-                        } catch (DateTimeParseException e) {
-                            logger.error("Invalid date format in JSON object: start_date='{}', end_date='{}'. Skipping entry.", startDateStr, endDateStr, e);
-                        }
-                    } else {
-                        logger.warn("start_date or end_date is empty. Skipping entry: {}", obj);
+                if (obj.has("start_date") && !obj.isNull("start_date") &&
+                            obj.has("end_date") && !obj.isNull("end_date") &&
+                            obj.has("fte_s_") && !obj.isNull("fte_s_")) {
+                    LocalDate startDate = LocalDate.parse(obj.getString("start_date"), DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+                    LocalDate endDate = LocalDate.parse(obj.getString("end_date"), DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+    
+                    if (YearMonth.from(startDate).equals(filterMonth)) {
+                        long monthsBetween = Math.max(1, ChronoUnit.MONTHS.between(startDate, endDate));
+                        double fteValue = obj.getDouble("fte_s_");
+                        totalFTEs += fteValue / monthsBetween;
                     }
                 }
             }
-
             long endtime_h = System.currentTimeMillis();
             logQueryTime(starttime_h, endtime_h, "HubSpot Query",null);
         } catch (Exception e) {

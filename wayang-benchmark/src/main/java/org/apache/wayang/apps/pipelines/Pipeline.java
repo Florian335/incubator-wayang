@@ -201,6 +201,7 @@ public class Pipeline {
         try {
             List<String> allowedRoles = Arrays.asList("DK", "US inc.");
 
+            long starttime_f = System.currentTimeMillis();
             Collection<Tuple2<Float,String>> filteredData = planBuilder
                 .readRestAPISource(urlForecast, apiMethod, headers, payload) 
                 .filter(json -> allowedRoles.contains(json.optString("Roles", "")))  
@@ -226,6 +227,9 @@ public class Pipeline {
                 .map(tuple -> tuple.field1)  
                 .distinct()
                 .count();
+            
+            long endtime_f = System.currentTimeMillis();
+            logQueryTime(starttime_f, endtime_f, "Forecast Query");
 
 
         } catch (Exception e) {
@@ -243,7 +247,7 @@ public class Pipeline {
         boolean moreResults = true;
         YearMonth filterMonth = YearMonth.from(LocalDate.parse(monthToday, DateTimeFormatter.ofPattern("yyyy-MM-dd")));
         double totalFTEs = 0.0;
-        String payload = null;
+        String payload = "";
 
         Collection<JSONObject> allProperties = new ArrayList<>();
         try {
@@ -276,6 +280,7 @@ public class Pipeline {
                 }
             }
 
+            long starttime_h = System.currentTimeMillis();
             Collection<Double> fteCollection = planBuilder
                 .loadCollection(allProperties) 
                 .filter(obj -> obj.has("start_date") && !obj.isNull("start_date") &&
@@ -300,6 +305,8 @@ public class Pipeline {
                 .collect(); 
              
         totalFTEs = fteCollection.isEmpty() ? 0.0 : fteCollection.iterator().next();
+        long endtime_h = System.currentTimeMillis();
+        logQueryTime(starttime_h, endtime_h, "HubSpot Query");
 
         } catch (Exception e) {
             log.error("Error fetching data from Hubspot API: {}", e.getMessage(), e);

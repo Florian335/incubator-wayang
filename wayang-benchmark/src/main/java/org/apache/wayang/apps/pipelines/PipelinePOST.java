@@ -23,6 +23,7 @@ import org.apache.wayang.basic.data.Tuple2;
 import org.apache.wayang.core.api.Configuration;
 import org.apache.wayang.core.api.WayangContext;
 import org.apache.wayang.java.Java;
+import org.apache.wayang.api.DataQuanta;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.json.JSONArray;
@@ -167,7 +168,12 @@ public class PipelinePOST {
             long endtime_f = System.currentTimeMillis();
             logQueryTime(starttime_f, endtime_f, "Forecast Entire Query Process");
 
+            long starttime_h = System.currentTimeMillis();
             double totalFTEsHubspot = HubspotPipelinePOST(planBuilder, urlHubspot, monthToday);
+            long endtime_h = System.currentTimeMillis();
+            logQueryTime(starttime_h, endtime_h, "HubSpot Entire Query Process");
+
+
 
             log.info("Pipeline FTEs: {}", totalFTEsHubspot);
 
@@ -205,16 +211,17 @@ public class PipelinePOST {
         try {
             List<String> allowedRoles = Arrays.asList("DK", "US inc.");
 
+            long starttime_f = System.currentTimeMillis();
             Collection<Tuple2<Float,String>> filteredData = planBuilder
                 .readRestAPISource(urlForecast, apiMethod, headers, payload) 
                 .filter(json -> allowedRoles.contains(json.optString("Roles", "")))  
                 .map(json -> {
-                    String dec2024Str = json.optString("Dec 2024", "0");
+                    String jan2025str = json.optString("Jan 2025", "0");
                     float fte;
                     try {
-                        fte = Float.parseFloat(dec2024Str) / 165;
+                        fte = Float.parseFloat(jan2025str) / (float) 172.5;
                     } catch (NumberFormatException e) {
-                        log.error("Invalid number for Dec 2024: " + dec2024Str, e);
+                        log.error("Invalid number for January 2025: " + jan2025str, e);
                         fte = 0.0f;
                     }
                     String person = json.optString("Person", "Unknown");
@@ -230,6 +237,10 @@ public class PipelinePOST {
                 .map(tuple -> tuple.field1)  
                 .distinct()
                 .count();
+            
+            long endtime_f = System.currentTimeMillis();
+            logQueryTime(starttime_f, endtime_f, "Forecast Query");
+
 
         } catch (Exception e) {
             log.error("Error fetching data from Forecast API: {}", e.getMessage(), e);
@@ -300,13 +311,6 @@ public class PipelinePOST {
                 }
             }
 
-            log.info("Number of rows: {}", allProperties.size());
-            
-            JSONObject firstobject = allProperties.iterator().next();
-            int numkeys = firstobject.keySet().size();
-
-            log.info("Number of columns: {}", numkeys);
-
 
             long starttime_h = System.currentTimeMillis();
             Collection<Double> fteCollection = planBuilder
@@ -335,7 +339,7 @@ public class PipelinePOST {
             totalFTEs = fteCollection.isEmpty() ? 0.0 : fteCollection.iterator().next();
 
             long endtime_h = System.currentTimeMillis();
-            logQueryTime(starttime_h, endtime_h, "HubSpot Entire Query Process");
+            logQueryTime(starttime_h, endtime_h, "HubSpot Query");
 
         } catch (Exception e) {
             log.error("Error fetching data from HubSpot API: {}", e.getMessage(), e);
