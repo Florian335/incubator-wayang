@@ -12,7 +12,8 @@
 
   Unless required by applicable law or agreed to in writing,
   software distributed under the License is distributed on an
-  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+  "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY
   KIND, either express or implied.  See the License for the
   specific language governing permissions and limitations
   under the License.
@@ -112,6 +113,25 @@
             <artifactId>junit-jupiter</artifactId>
             <version>5.6.1</version>
             <scope>test</scope>
+        </dependency>
+
+        <!-- Parquet Libraries -->
+        <dependency>
+            <groupId>org.apache.parquet</groupId>
+            <artifactId>parquet-hadoop</artifactId>
+            <version>1.12.3</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.parquet</groupId>
+            <artifactId>parquet-avro</artifactId>
+            <version>1.12.3</version>
+        </dependency>
+
+        <!-- Avro for Parquet Schema Support -->
+        <dependency>
+            <groupId>org.apache.avro</groupId>
+            <artifactId>avro</artifactId>
+            <version>1.11.1</version>
         </dependency>
     </dependencies>
 </project>

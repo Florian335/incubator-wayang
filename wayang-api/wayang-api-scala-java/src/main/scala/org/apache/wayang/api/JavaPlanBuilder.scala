@@ -25,7 +25,7 @@ import java.util.{Collection => JavaCollection}
 import org.apache.commons.lang3.Validate
 import org.apache.wayang.api.util.DataQuantaBuilderCache
 import org.apache.wayang.basic.data.Record
-import org.apache.wayang.basic.operators.{TableSource, TextFileSource, KafkaTopicSource, RestAPISource}
+import org.apache.wayang.basic.operators.{TableSource, TextFileSource, KafkaTopicSource, RestAPISource, ParquetSource}
 import org.apache.wayang.commons.util.profiledb.model.Experiment
 import org.apache.wayang.core.api.WayangContext
 import org.apache.wayang.core.plan.wayangplan._
@@ -88,6 +88,16 @@ class JavaPlanBuilder(wayangCtx: WayangContext, jobName: String) {
     * @return [[DataQuantaBuilder]] for the [[Record]]s in the table
     */
   def readTable(source: TableSource) = createSourceBuilder(source)(ClassTag(classOf[Record])).asRecords
+  
+    /**
+    * Read a Parquet file and provide it as a dataset of [[String]]s, one per line.
+    *
+    * @param path the path to the Parquet file
+    * @return [[UnarySourceDataQuantaBuilder]] for the file
+    */
+  def readParquetFile(path: String): UnarySourceDataQuantaBuilder[UnarySourceDataQuantaBuilder[_, String], String] =
+    createSourceBuilder(new ParquetSource(path))(ClassTag(classOf[String]))
+
 
     /**
     * Reads data from a REST API and provides it as a dataset of [[JSONArray]]s.

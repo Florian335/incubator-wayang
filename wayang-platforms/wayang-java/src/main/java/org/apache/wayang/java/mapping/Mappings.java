@@ -59,7 +59,8 @@ public class Mappings {
             new ZipWithIdMapping(),
             new KafkaTopicSourceMapping(),
             new KafkaTopicSinkMapping(),
-            new RestAPISourceMapping()
+            new RestAPISourceMapping(),
+            new ParquetSourceMapping()
     );
 
     public static Collection<Mapping> GRAPH_MAPPINGS = Arrays.asList(
