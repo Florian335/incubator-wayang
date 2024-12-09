@@ -111,30 +111,27 @@ public class JavaRestAPISource extends RestAPISource implements JavaExecutionOpe
 
     public JSONArray fetchDataFromAPI() {
         String hardcodedURL = "https://api.hubapi.com/crm/v3/objects/deals/search"; 
-        this.logger.info("Fetching data from API with method: {}", this.apiMethod);
+        logger.info("Fetching data from API with method: {}", this.apiMethod);
 
         long apistarttime = System.currentTimeMillis();
         HttpURLConnection connection = null;
         try {
-            // Ensure POST requests only go to the hardcoded URL
             if ("POST".equalsIgnoreCase(this.apiMethod) && !hardcodedURL.equals(this.apiURL)) {
                 logger.error("POST requests are only allowed to the hardcoded URL: {}", hardcodedURL);
                 throw new IllegalArgumentException("POST requests must use the hardcoded URL.");
             }
 
-            // Use the appropriate URL based on the method
             URL url = new URL(this.apiURL);
             connection = (HttpURLConnection) url.openConnection();
-            connection.setRequestMethod(this.apiMethod); // Use GET or POST dynamically
+            connection.setRequestMethod(this.apiMethod); 
 
-            // Add headers if present
             if (!this.headers.isEmpty()) {
                 for (String header : this.headers.split(";")) {
                     String[] headerParts = header.trim().split(":", 2);
                     if (headerParts.length == 2) {
                         connection.setRequestProperty(headerParts[0].trim(), headerParts[1].trim());
                     } else {
-                        this.logger.warn("Invalid header format: {}", header);
+                        logger.warn("Invalid header format: {}", header);
                     }
                 }
             }
@@ -143,7 +140,7 @@ public class JavaRestAPISource extends RestAPISource implements JavaExecutionOpe
                 connection.setDoOutput(true); 
                 String payload = this.getPayload(); 
                 if (payload == null || payload.isEmpty()) {
-                    this.logger.warn("No payload provided for POST request.");
+                    logger.warn("No payload provided for POST request.");
                 } else {
                     try (OutputStream os = connection.getOutputStream()) {
                         byte[] input = payload.getBytes("utf-8");
@@ -151,7 +148,6 @@ public class JavaRestAPISource extends RestAPISource implements JavaExecutionOpe
                     }
                 }
             }
-            // Read the response
             BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream()));
             StringBuilder content = new StringBuilder();
             String inputLine;
@@ -165,12 +161,11 @@ public class JavaRestAPISource extends RestAPISource implements JavaExecutionOpe
             long apiendttime = System.currentTimeMillis();
             logAPIlatency(apistarttime, apiendttime, "API Latency",this.apiURL);
 
-            // Attempt to parse as JSONArray
             try {
-                this.logger.info("Attempting to parse response as JSONArray.");
+                logger.info("Attempting to parse response as JSONArray.");
                 return new JSONArray(response);
             } catch (JSONException e) {
-                this.logger.info("Response is not a JSONArray. Trying as JSONObject.");
+                logger.info("Response is not a JSONArray. Trying as JSONObject.");
             }
 
             // Attempt to parse as JSONObject
@@ -180,18 +175,18 @@ public class JavaRestAPISource extends RestAPISource implements JavaExecutionOpe
                 jsonArray.put(jsonObject);
                 return jsonArray;
             } catch (JSONException e) {
-                this.logger.info("Response is not a JSONObject. Trying as CSV string.");
+                logger.info("Response is not a JSONObject. Trying as CSV string.");
             }
 
             // Treat response as CSV and parse
             try {
                 return convertCsvToJson(response);
             } catch (Exception e) {
-                this.logger.error("Failed to parse response as CSV string.", e);
+                logger.error("Failed to parse response as CSV string.", e);
             }
 
         } catch (IOException e) {
-            this.logger.error("Unable to fetch data from REST API", e);
+            logger.error("Unable to fetch data from REST API", e);
         } finally {
             if (connection != null) {
                 connection.disconnect();

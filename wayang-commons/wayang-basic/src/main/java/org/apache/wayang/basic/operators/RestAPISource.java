@@ -44,7 +44,7 @@ public class RestAPISource extends UnarySource<JSONObject> {
     public final String apiURL;
     public final String apiMethod;
     public final String headers;
-    public final String payload; // New field for payload
+    public final String payload; 
 
 
     public RestAPISource(String apiURL, String apiMethod, String headers, String payload) {
