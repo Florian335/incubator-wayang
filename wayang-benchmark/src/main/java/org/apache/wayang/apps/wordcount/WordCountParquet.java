@@ -87,7 +87,7 @@ public class WordCountParquet {
     public static void main(String[] args){
 
         // Settings
-        String inputUrl = "/Users/flo/github/rp-2024/incubator-wayang/wayang-benchmark/src/main/java/org/apache/wayang/apps/wordcount/text.parquet";
+        String inputUrl = "/Users/flo/github/rp-2024/incubator-wayang/wayang-benchmark/src/main/java/org/apache/wayang/apps/wordcount/text_large.parquet";
 
         // Get a plan builder.
         WayangContext wayangContext = new WayangContext(new Configuration())
@@ -128,7 +128,7 @@ public class WordCountParquet {
                 .collect();
         
         long endtime_f = System.currentTimeMillis();
-        logQueryTime(starttime_f, endtime_f, "WordCount Query");
+        logQueryTime(starttime_f, endtime_f, "WordCount Parquet Query");
 
         System.out.println(wordcounts);
     }
