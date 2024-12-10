@@ -1,6 +1,0 @@
-[{
-    "step": "API Latency",
-    "latency_seconds": 0.224,
-    "url": "https://jsonplaceholder.typicode.com/posts",
-    "timestamp": "Mon Dec 09 21:26:38 CET 2024"
-}]

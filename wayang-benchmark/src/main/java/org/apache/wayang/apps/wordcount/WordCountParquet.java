@@ -25,9 +25,64 @@ import org.apache.wayang.core.optimizer.cardinality.DefaultCardinalityEstimator;
 import org.apache.wayang.java.Java;
 import org.apache.wayang.spark.Spark;
 import java.util.Collection;
+import java.util.Date;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
+import java.time.Instant;
 import java.util.Arrays;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 public class WordCountParquet {
+        private static final Logger log = LoggerFactory.getLogger(WordCountParquet.class);
+        private static final String LOG_FILE_PATH = "parquet-performance.json";
+
+        public static void logtoJSON(String stepname, Double latencyseconds, Double executiontime){
+                try {
+                JSONObject logrecord = new JSONObject();
+                logrecord.put("timestamp", Date.from(Instant.now()).toString());
+                logrecord.put("step",stepname);
+                logrecord.put("execution_time_seconds", executiontime);
+
+                appendlogtofile(logrecord);
+                } catch (Exception e) {
+                log.error("Unable to add data to JSON: {}", e.getMessage(),e);
+                }
+        }
+
+        public static void logQueryTime(long starttime, long endtime, String stepname){
+                Double executiontimeseconds = (endtime - starttime) / 1000.0;
+                logtoJSON(stepname, null, executiontimeseconds);
+        }
+
+        private static void appendlogtofile(JSONObject logrecord) throws IOException {
+                JSONArray existinglogs;
+
+                if (Files.exists(Paths.get(LOG_FILE_PATH))){
+                String content = new String(Files.readAllBytes(Paths.get(LOG_FILE_PATH)));
+                if (!content.isEmpty()){
+                        existinglogs = new JSONArray(content);
+                } else {
+                        existinglogs = new JSONArray();
+                }
+                } else {
+                existinglogs = new JSONArray();
+                }
+
+                existinglogs.put(logrecord);
+                Files.write(
+                Paths.get(LOG_FILE_PATH),
+                existinglogs.toString(4).getBytes(),
+                StandardOpenOption.CREATE,
+                StandardOpenOption.TRUNCATE_EXISTING
+                );
+        }
 
     public static void main(String[] args){
 
@@ -43,6 +98,7 @@ public class WordCountParquet {
                 .withUdfJarOf(WordCountParquet.class);
 
         // Start building the WayangPlan.
+        long starttime_f = System.currentTimeMillis();
         Collection<Tuple2<String, Integer>> wordcounts = planBuilder
                 // Read the text file.
                 .readParquetFile(inputUrl).withName("Load file")
@@ -70,6 +126,9 @@ public class WordCountParquet {
 
                 // Execute the plan and collect the results.
                 .collect();
+        
+        long endtime_f = System.currentTimeMillis();
+        logQueryTime(starttime_f, endtime_f, "WordCount Query");
 
         System.out.println(wordcounts);
     }
